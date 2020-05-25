@@ -1,5 +1,5 @@
 # rosCAR
-# Raspberry pin out and wire color described below
+# The modified version is available under ~/src/PinOuts.xlsx
 
 ![](Raspberry_pi_pinout.jpg)
 
