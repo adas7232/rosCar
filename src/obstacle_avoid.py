@@ -120,13 +120,20 @@ def callback(msg):
     dist_front = round(msg.x, 2)
     dist_right = round(msg.y, 2)
     dist_left = round(msg.theta, 2)    
+    if dist_front > 10:        
+        print("Just drive forward")
+        fdrive(50, 50)            
+    else:
+        print("Wait, there is something in the front!")
+        all_stop()
+        sleep(2)
+        fdrive(-50, -50)   
+        sleep(2)
     #movebot()
 
 def movebot():
     global dist_front, dist_left, dist_right
-    while (True):
-        print("center =", dist_front, "right = ", dist_right, "left = ", dist_left)   
-        print("\n")  
+    while (True):        
         if dist_front >30 and dist_right >5 and dist_left >5:
             fdrive(30, 30)
             rdrive(30, 30)
@@ -168,7 +175,9 @@ def listener():
 if __name__ == '__main__':
     try:
         listener()        
+        sleep(0.1)
         # now move the robot        
+        #movebot()
     except rospy.ROSInterruptException:
         rospy.loginfo("node terminated.")
     except KeyboardInterrupt:

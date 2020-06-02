@@ -4,7 +4,7 @@ Created on Sun Apr 12 18:02:36 2020
 
 @author: adas
 """
-
+start_time = 0
 # dc motor drive 
 from gpiozero import PWMOutputDevice
 import time
@@ -115,63 +115,56 @@ def all_stop():
     pwm_front_left.stop()
     pwm_front_right.stop()
 
-pdb.set_trace()
 indx = 0
 
-def measuredDistance():
-    distance_sum_C = 0
-    distance_sum_R = 0
-    distance_sum_L = 0
-    maxLoop = 2
-    indx = 0    
+def measuredDistance(echo):      
+    distance_sum = 0    
+    maxLoop = 2           
     for indx in range(maxLoop):
-        # Allow module to settle
-        # time.sleep(1)
+        # Allow module to settle and makeit false if not already
+        gpio.output(trigger, False)
+        time.sleep(0.001)
         # Send 10us pulse to trigger
         gpio.output(trigger, True)
         time.sleep(0.00001)
         gpio.output(trigger, False)   
-        # Center           
-        while gpio.input(echoC)==0:
-            start_C = time.time()    
-        while gpio.input(echoC)==1:
-            stop_C = time.time() 
-        # Right
-        while gpio.input(echoR)==0:
-            start_R = time.time()    
-        while gpio.input(echoR)==1:
-            stop_R = time.time()
-        # Left
-        while gpio.input(echoL)==0:
-            start_L = time.time()    
-        while gpio.input(echoL)==1:
-            stop_L = time.time()   
+        # Center                      
+        while gpio.input(echo)==0:                    
+            start_time = time.time() 
+        else:
+            start_time = time.time()             
+        while gpio.input(echo)==1:              
+            stop_time = time.time()    
+        else:
+            stop_time = time.time()             
         # Calculate pulse length
-        distance_C = (stop_C-start_C) * 17150 # elapsed_time * 34300 / 2 in cm
-        distance_R = (stop_R-start_R) * 17150 
-        distance_L = (stop_L-start_L) * 17150 
-        # Distance pulse travelled in that time is time
-        # multiplied by the speed of sound (cm/s)          
-        distance_sum_C = distance_sum_C + distance_C
-        distance_sum_R = distance_sum_R + distance_R
-        distance_sum_L = distance_sum_L + distance_L    
-    distance_avg_C = distance_sum_C/maxLoop
-    distance_avg_R = distance_sum_R/maxLoop
-    distance_avg_L = distance_sum_L/maxLoop    
-    return distance_avg_C, distance_avg_L, distance_avg_R
+        distance_ini = (stop_time-start_time) * 17150 # elapsed_time * 34300 / 2 in cm             
+        distance_sum = distance_sum + distance_ini            
+    distance = distance_sum/maxLoop
+    return distance
     
 def main():
     while True:
-        distance_avg_C, distance_avg_L, distance_avg_R = measuredDistance()
+        dist_c = measuredDistance(echoC)
         print("Ultrasonic Measurement")
-        print("Distance from the center is :", distance_avg_C, " cm")
-        print("\n")
-        print("Distance from the right is :", distance_avg_R, " cm")
-        print("\n")
-        print("Distance from the left is :", distance_avg_L, " cm")
-        print("\n")
+        print("Distance from the center is :", dist_c, " cm")        
+        if dist_c > 10:        
+            print("Just drive forward")
+            fdrive(50, 50)            
+        else:
+            print("Wait, there is something in the front!")
+            all_stop()
+            sleep(2)
+            fdrive(-50, -50)   
+            sleep(2)
+            all_stop()
         
-        
+       
 if __name__ == "__main__":
-    """ This is executed when run from the command line """
-    main()
+    """ This is executed when run from the command line """    
+    try:
+       main() 
+    except KeyboardInterrupt:
+        gpio.cleanup()
+    finally:  
+        gpio.cleanup() 
