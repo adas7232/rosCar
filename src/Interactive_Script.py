@@ -22,19 +22,19 @@ echoR    = 17 # white
 echoC    = 18 # white
 echoL    = 15 # white
 #
-gpio.setup(trigger,gpio.OUT)  # trigger
+gpio.setup(trigger,gpio.OUT)   # trigger
 gpio.setup(echoR,gpio.IN)      # Echo Right
 gpio.setup(echoC,gpio.IN)      # Echo Center
 gpio.setup(echoL,gpio.IN)      # Echo Left
 ## Front  DC motor control
 # Motor A, Left Side gpio CONSTANTS
-pwm_drive_front_left = 23        # ENA - H-Bridge enable pin (white)
-drive_fwd_front_left = 25    # IN1 - Forward Drive (yellow)
-drive_rvs_front_left = 24    # IN2 - Reverse Drive (green)
+pwm_drive_front_left = 23      # ENA - H-Bridge enable pin (white)
+drive_fwd_front_left = 25      # IN1 - Forward Drive (yellow)
+drive_rvs_front_left = 24      # IN2 - Reverse Drive (green)
 # Motor B, Right Side gpio CONSTANTS
-pwm_drive_front_right = 27        # ENB - H-Bridge enable pin (blue)
-drive_fwd_front_right = 22    # IN1 - Forward Drive (brown)
-drive_rvs_front_right = 10   # IN2 - Reverse Drive (red)
+pwm_drive_front_right = 27     # ENB - H-Bridge enable pin (blue)
+drive_fwd_front_right = 22     # IN1 - Forward Drive (brown)
+drive_rvs_front_right = 10     # IN2 - Reverse Drive (red)
 # Setup the gpio pins as Output
 gpio.setup(pwm_drive_front_left,gpio.OUT)
 gpio.setup(drive_fwd_front_left,gpio.OUT)
@@ -46,22 +46,22 @@ gpio.setup(drive_rvs_front_right,gpio.OUT)
 pwm_front_left = gpio.PWM(pwm_drive_front_left, 1000)
 pwm_front_right = gpio.PWM(pwm_drive_front_right, 1000)
 #
-def fdrive(leftVal, rightVal):
-    if leftVal <0: 
-        gpio.output(drive_fwd_front_left, False)
-        gpio.output(drive_rvs_front_left, True)  
-    else:
-        gpio.output(drive_fwd_front_left, True) 
-        gpio.output(drive_rvs_front_left, False) 
-    if rightVal <0: 
-        gpio.output(drive_fwd_front_right, False)
-        gpio.output(drive_rvs_front_right, True) 
-    else:
-        gpio.output(drive_fwd_front_right, True)
-        gpio.output(drive_rvs_front_right, False) 
+# def fdrive(front_left, front_right):
+#     if front_left <0: 
+#         gpio.output(drive_fwd_front_left, False)
+#         gpio.output(drive_rvs_front_left, True)  
+#     else:
+#         gpio.output(drive_fwd_front_left, True) 
+#         gpio.output(drive_rvs_front_left, False) 
+#     if front_right <0: 
+#         gpio.output(drive_fwd_front_right, False)
+#         gpio.output(drive_rvs_front_right, True) 
+#     else:
+#         gpio.output(drive_fwd_front_right, True)
+#         gpio.output(drive_rvs_front_right, False) 
        
-    pwm_front_left.start(abs(leftVal))
-    pwm_front_right.start(abs(rightVal))
+#     pwm_front_left.start(abs(front_left))
+#     pwm_front_right.start(abs(front_right))
 
 
 ## Rear  DC motor control
@@ -84,22 +84,38 @@ gpio.setup(drive_rvs_rear_right,gpio.OUT)
 pwm_rear_left = gpio.PWM(pwm_drive_rear_left, 1000)
 pwm_rear_right = gpio.PWM(pwm_drive_rear_right, 1000)
 
-def rdrive(leftVal, rightVal):
-    if leftVal <0: 
+def drive(front_left, front_right, rear_left, rear_right):
+    if front_left <0: 
+        gpio.output(drive_fwd_front_left, False)
+        gpio.output(drive_rvs_front_left, True)  
+    else:
+        gpio.output(drive_fwd_front_left, True) 
+        gpio.output(drive_rvs_front_left, False) 
+    if front_right <0: 
+        gpio.output(drive_fwd_front_right, False)
+        gpio.output(drive_rvs_front_right, True) 
+    else:
+        gpio.output(drive_fwd_front_right, True)
+        gpio.output(drive_rvs_front_right, False) 
+       
+    pwm_front_left.start(abs(front_left))
+    pwm_front_right.start(abs(front_right))
+    # 
+    if rear_left <0: 
         gpio.output(drive_fwd_rear_left, False)
         gpio.output(drive_rvs_rear_left, True)  
     else:
         gpio.output(drive_fwd_rear_left, True) 
         gpio.output(drive_rvs_rear_left, False) 
-    if rightVal <0: 
+    if rear_right <0: 
         gpio.output(drive_fwd_rear_right, False)
         gpio.output(drive_rvs_rear_right, True) 
     else:
         gpio.output(drive_fwd_rear_right, True)
         gpio.output(drive_rvs_rear_right, False) 
        
-    pwm_rear_left.start(abs(leftVal))
-    pwm_rear_right.start(abs(rightVal))
+    pwm_rear_left.start(abs(rear_left))
+    pwm_rear_right.start(abs(rear_right))
  
 def all_stop():
     gpio.output(drive_fwd_front_left, False) 
@@ -148,16 +164,24 @@ def main():
         dist_c = measuredDistance(echoC)
         print("Ultrasonic Measurement")
         print("Distance from the center is :", dist_c, " cm")        
-        if dist_c > 10:        
+        if dist_c > 40:        
             print("Just drive forward")
-            fdrive(50, 50)            
+            drive(40, 40, 40, 40)                       
         else:
             print("Wait, there is something in the front!")
             all_stop()
             sleep(2)
-            fdrive(-50, -50)   
+            print("Backing up a little")
+            drive(-50, -50, -50, -50)
+            sleep(1.5)
+            all_stop()
+            print("Thinking about turning: Right or Left?")
+            sleep(3)
+            print("Decided to turn right")
+            drive(70, -70, 70, -70)
             sleep(2)
             all_stop()
+            sleep(3)
         
        
 if __name__ == "__main__":

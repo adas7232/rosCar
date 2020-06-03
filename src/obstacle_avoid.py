@@ -41,27 +41,9 @@ gpio.setup(pwm_drive_front_right,gpio.OUT)
 gpio.setup(drive_fwd_front_right,gpio.OUT)
 gpio.setup(drive_rvs_front_right,gpio.OUT)
 # Setup two gpio driver pins as PWM
-pwm_front_left = gpio.PWM(pwm_drive_front_left, 1000)
-pwm_front_right = gpio.PWM(pwm_drive_front_right, 1000)
+pwm_front_left = gpio.PWM(pwm_drive_front_left, 100)
+pwm_front_right = gpio.PWM(pwm_drive_front_right, 100)
 #
-def fdrive(leftVal, rightVal):
-    if leftVal <0: 
-        gpio.output(drive_fwd_front_left, False)
-        gpio.output(drive_rvs_front_left, True)  
-    else:
-        gpio.output(drive_fwd_front_left, True) 
-        gpio.output(drive_rvs_front_left, False) 
-    if rightVal <0: 
-        gpio.output(drive_fwd_front_right, False)
-        gpio.output(drive_rvs_front_right, True) 
-    else:
-        gpio.output(drive_fwd_front_right, True)
-        gpio.output(drive_rvs_front_right, False) 
-    
-    pwm_front_left.start(abs(leftVal))
-    pwm_front_right.start(abs(rightVal))
-
-
 ## Rear  DC motor control
 # Motor A, Left Side gpio CONSTANTS
 pwm_drive_rear_left = 26       # ENA - H-Bridge enable pin (yellow)
@@ -79,25 +61,41 @@ gpio.setup(pwm_drive_rear_right,gpio.OUT)
 gpio.setup(drive_fwd_rear_right,gpio.OUT)
 gpio.setup(drive_rvs_rear_right,gpio.OUT)
 # Setup two gpio driver pins as PWM
-pwm_rear_left = gpio.PWM(pwm_drive_rear_left, 1000)
-pwm_rear_right = gpio.PWM(pwm_drive_rear_right, 1000)
+pwm_rear_left = gpio.PWM(pwm_drive_rear_left, 100)
+pwm_rear_right = gpio.PWM(pwm_drive_rear_right, 100)
 
-def rdrive(leftVal, rightVal):
-    if leftVal <0: 
+def drive(front_left, front_right, rear_left, rear_right):
+    if front_left <0: 
+        gpio.output(drive_fwd_front_left, False)
+        gpio.output(drive_rvs_front_left, True)  
+    else:
+        gpio.output(drive_fwd_front_left, True) 
+        gpio.output(drive_rvs_front_left, False) 
+    if front_right <0: 
+        gpio.output(drive_fwd_front_right, False)
+        gpio.output(drive_rvs_front_right, True) 
+    else:
+        gpio.output(drive_fwd_front_right, True)
+        gpio.output(drive_rvs_front_right, False) 
+       
+    pwm_front_left.start(abs(front_left))
+    pwm_front_right.start(abs(front_right))
+    # 
+    if rear_left <0: 
         gpio.output(drive_fwd_rear_left, False)
         gpio.output(drive_rvs_rear_left, True)  
     else:
         gpio.output(drive_fwd_rear_left, True) 
         gpio.output(drive_rvs_rear_left, False) 
-    if rightVal <0: 
+    if rear_right <0: 
         gpio.output(drive_fwd_rear_right, False)
         gpio.output(drive_rvs_rear_right, True) 
     else:
         gpio.output(drive_fwd_rear_right, True)
         gpio.output(drive_rvs_rear_right, False) 
-    
-    pwm_rear_left.start(abs(leftVal))
-    pwm_rear_right.start(abs(rightVal))
+       
+    pwm_rear_left.start(abs(rear_left))
+    pwm_rear_right.start(abs(rear_right))
 
 def all_stop():
     gpio.output(drive_fwd_front_left, False) 
@@ -116,67 +114,63 @@ def all_stop():
 def callback(msg):
     global dist_front, dist_left, dist_right
     # rospy.loginfo("Received a POSE2D message!")
-    rospy.loginfo("distance in cm: [%f,%f,%f]"%(msg.x, msg.y, msg.theta))
+    rospy.loginfo_throttle(2, "distance in cm: [%f,%f,%f]"%(msg.x, msg.y, msg.theta))
     dist_front = round(msg.x, 2)
     dist_right = round(msg.y, 2)
     dist_left = round(msg.theta, 2)    
-    if dist_front > 10:        
-        print("Just drive forward")
-        fdrive(50, 50)            
-    else:
-        print("Wait, there is something in the front!")
-        all_stop()
-        sleep(2)
-        fdrive(-50, -50)   
-        sleep(2)
+    
     #movebot()
 
 def movebot():
     global dist_front, dist_left, dist_right
-    while (True):        
-        if dist_front >30 and dist_right >5 and dist_left >5:
-            fdrive(30, 30)
-            rdrive(30, 30)
-            print("Driving forward .. \n")
-        elif dist_right <= 5 and dist_left > 5:
-            fdrive(10, 40)
-            rdrive(10, 40)
-            print("Turning Left .. \n")
-        elif dist_left <= 5 and dist_right >5:
-            fdrive(40, 10)
-            rdrive(40, 10)
-            print("Turning Right .. \n")
-        elif dist_front <=30 and dist_right >5 and dist_left >5:
-            # all_stop()        
-            # sleep(1)
-            # print("Reversing ..\n")
-            # fdrive(-45, -45)
-            # rdrive(-45, -45)
-            # sleep(0.5)  
-            # all_stop() 
-            # sleep(1)      
-            fdrive(50, 10)
-            print("Turning right .. \n")
-            # sleep(0.5)
-            # all_stop() 
-            # sleep(1)
-        else:
+    flc = 33 # front left command
+    frc = 30 # front right command
+    rlc = 33 # rear left command
+    rrc = 30 # rear right command
+    dist_lim_front = 40
+    dist_lim_right = 10
+    dist_lim_left = 10
+    if dist_front > dist_lim_front and dist_left > dist_lim_left and dist_right > dist_lim_right:        
+        print("Just drive forward ...")
+        drive(flc, frc, rlc, rrc)                       
+    elif dist_front > dist_lim_front or dist_left > dist_lim_left or dist_right > dist_lim_right:
+        print("Wait, there is something on my way ...")
+        all_stop()
+        sleep(2)  
+        print("Backing up a little ...")
+        drive(-flc, -frc, -rlc, -rrc)
+        sleep(0.5)
+        all_stop()
+        sleep(1.5)      
+        print("Thinking about turning: Right or Left? ...")
+        if dist_right > dist_left:        
+            print("Decided to turn right ...")
+            drive(flc+10, -frc-10, rlc+10, -rrc-10)
+            sleep(1.5)
             all_stop()
-            sleep(0.5)
-            print("All Stop!\n")
-    #
-def listener():
-    rospy.init_node('dist_listener', anonymous=True)
-    rospy.Subscriber('distance_msg', Pose2D, callback)
-    # spin() simply keeps python from exiting until this node is stopped
-    rospy.spin()
-
+            sleep(2)
+        elif dist_left > dist_right:        
+            print("Decided to turn left ...")
+            drive(-flc-10, frc+10, -rlc-10, rrc+10)
+            sleep(1.5)
+            all_stop()
+            sleep(2)
+        else:
+            print("Backing up more ...")
+            drive(-flc, -frc, -rlc, -rrc)
+            sleep(1.5)
+            all_stop()
+            sleep(1.5)
 
 if __name__ == '__main__':
     try:
-        listener()        
-        sleep(0.1)
-        # now move the robot        
+        rospy.init_node('dist_listener', anonymous=True)
+        rospy.Subscriber('distance_msg', Pose2D, callback)
+        rate = rospy.Rate(5)
+        # spin() simply keeps python from exiting until this node is stopped        
+        while not rospy.is_shutdown():
+            movebot() 
+            rate.sleep()             
         #movebot()
     except rospy.ROSInterruptException:
         rospy.loginfo("node terminated.")
